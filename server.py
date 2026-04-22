@@ -29,21 +29,26 @@ def save_user(user_id, username, first_name, last_name):
     if user_id_str not in users:
         users[user_id_str] = {
             'id': user_id,
-            'username': username,
-            'first_name': first_name,
+            'username': username or '',
+            'first_name': first_name or '',
             'last_name': last_name or '',
             'first_interaction': now,
             'last_interaction': now
         }
+        print(f"➕ Новый пользователь: {user_id} ({username})")
     else:
         users[user_id_str]['last_interaction'] = now
         if username and username != users[user_id_str].get('username'):
             users[user_id_str]['username'] = username
         if first_name and first_name != users[user_id_str].get('first_name'):
             users[user_id_str]['first_name'] = first_name
+        print(f"🔄 Обновлён: {user_id} ({username})")
     
     save_users(users)
     print(f"✅ Сохранён: {user_id} ({username}) - {now}")
+    
+    updated_users = load_users()
+    print(f"📊 Всего пользователей в файле: {len(updated_users)}")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -58,7 +63,7 @@ def send_welcome(message):
             "✅Подпишись на канал и получи полный доступ к играм👇")
     
     keyboard = InlineKeyboardMarkup()
-    button = InlineKeyboardButton(text="ПОДПИСАТЬСЯ", url="https://t.me/+VV1URmD4IusxNWUx", style="success")
+    button = InlineKeyboardButton(text="ПОДПИСАТЬСЯ", url="https://t.me/+VV1URmD4IusxNWUx")
     keyboard.add(button)
     
     bot.send_message(user_id, text, reply_markup=keyboard)
@@ -77,27 +82,37 @@ def broadcast(message):
         return
     
     try:
-        parts = message.text.replace('/broadcast', '', 1).strip().split('|')
+        args = message.text.replace('/broadcast', '', 1).strip()
+        if not args:
+            raise ValueError("Нет аргументов")
+        
+        parts = args.split('|')
+        if len(parts) < 3:
+            raise ValueError("Недостаточно аргументов")
+            
         text = parts[0].strip()
         file_id = parts[1].strip()
         button_url = parts[2].strip()
-    except:
-        bot.reply_to(message, "❌ Формат: /broadcast Текст | file_id | ссылка")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Формат: /broadcast Текст | file_id | ссылка\nОшибка: {str(e)}")
         return
     
     users_dict = load_users()
+    print(f"📊 Загружено пользователей: {len(users_dict)}")
+    
     if not users_dict:
-        bot.reply_to(message, "📭 Нет пользователей.")
+        bot.reply_to(message, "📭 Нет пользователей в базе.")
         return
     
     users_ids = [int(uid) for uid in users_dict.keys()]
+    print(f"👥 ID пользователей: {users_ids}")
     
-    keyboard = InlineKeyboardMarkup()
-    button1 = InlineKeyboardButton(text="ПОЛУЧИТЬ БОНУС", url=button_url, style="success")
-    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url, style="success")  # Исправлено: было ur2
-    keyboard.add(button1, button2)  # Добавляем обе кнопки
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    button1 = InlineKeyboardButton(text="ПОЛУЧИТЬ БОНУС", url=button_url)
+    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url)
+    keyboard.add(button1, button2)
     
-    bot.reply_to(message, f"🚀 Рассылка для {len(users_ids)} пользователей...")
+    bot.reply_to(message, f"🚀 Начинаю рассылку для {len(users_ids)} пользователей...")
     
     success = 0
     fail = 0
@@ -106,37 +121,83 @@ def broadcast(message):
         try:
             bot.send_photo(user_id, file_id, caption=text, reply_markup=keyboard)
             success += 1
+            print(f"✅ Отправлено пользователю {user_id}")
             time.sleep(0.1)
-        except:
+        except Exception as e:
             fail += 1
+            print(f"❌ Ошибка при отправке {user_id}: {str(e)}")
     
-    bot.reply_to(message, f"✅ Готово!\nОтправлено: {success}\nОшибок: {fail}")
+    bot.reply_to(message, f"✅ Рассылка завершена!\n📤 Отправлено: {success}\n❌ Ошибок: {fail}")
 
-# Убраны лишние пробелы перед декоратором - это была главная проблема!
 @bot.message_handler(commands=['stats'])
 def stats(message):
     ADMIN_ID = 854916968
     if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "❌ Нет доступа")
         return
     
     users = load_users()
     
     if not users:
-        bot.reply_to(message, "📭 Нет пользователей.")
+        bot.reply_to(message, "📭 Нет пользователей в базе.")
         return
     
-    result = "📊 *Список пользователей:*\n\n"
-    for uid, data in users.items():
+    total = len(users)
+    
+    # Отправляем общее количество пользователей отдельным сообщением
+    total_msg = f"📊 *ОБЩЕЕ КОЛИЧЕСТВО ПОЛЬЗОВАТЕЛЕЙ:*\n👥 `{total}` пользователей"
+    bot.send_message(message.chat.id, total_msg, parse_mode='Markdown')
+    
+    # Если пользователей мало, показываем всех
+    if total <= 50:
+        result = "━━━━━━━━━━━━━━━━━━━━━\n\n📋 *ПОЛНЫЙ СПИСОК ПОЛЬЗОВАТЕЛЕЙ:*\n\n"
+        for uid, data in users.items():
+            name = data.get('first_name', 'No name')
+            username = data.get('username', '')
+            last_seen = data.get('last_interaction', 'Unknown')
+            first_seen = data.get('first_interaction', 'Unknown')
+            username_str = f" (@{username})" if username else ""
+            result += f"👤 *{name}*{username_str}\n"
+            result += f"🆔 `{uid}`\n"
+            result += f"📅 Первый раз: `{first_seen}`\n"
+            result += f"🕐 Последний раз: `{last_seen}`\n"
+            result += f"━━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            if len(result) > 3800:
+                bot.send_message(message.chat.id, result, parse_mode='Markdown')
+                result = ""
+        
+        if result:
+            bot.send_message(message.chat.id, result, parse_mode='Markdown')
+    else:
+        # Если пользователей много, показываем последних 10 активных
+        recent_msg = "━━━━━━━━━━━━━━━━━━━━━\n\n📋 *ПОСЛЕДНИЕ 10 АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ:*\n\n"
+        
+        # Сортируем по последней активности
+        sorted_users = sorted(users.items(), key=lambda x: x[1].get('last_interaction', ''), reverse=True)
+        
+        for uid, data in sorted_users[:10]:
+            name = data.get('first_name', 'No name')
+            username = data.get('username', '')
+            last_seen = data.get('last_interaction', 'Unknown')
+            username_str = f" (@{username})" if username else ""
+            recent_msg += f"👤 *{name}*{username_str}\n"
+            recent_msg += f"🆔 `{uid}`\n"
+            recent_msg += f"🕐 Последний раз: `{last_seen}`\n"
+            recent_msg += f"━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        bot.send_message(message.chat.id, recent_msg, parse_mode='Markdown')
+        
+        # Добавляем информацию о первом пользователе
+        first_user = min(users.items(), key=lambda x: x[1].get('first_interaction', ''))
+        uid, data = first_user
         name = data.get('first_name', 'No name')
-        username = data.get('username', '')
-        last_seen = data.get('last_interaction', 'Unknown')
-        username_str = f" (@{username})" if username else ""
-        result += f"• {name}{username_str}\n  🆔 `{uid}`\n  🕐 {last_seen}\n\n"
-    
-    if len(result) > 4000:
-        result = result[:4000] + "\n... (обрезано)"
-    
-    bot.send_message(message.chat.id, result, parse_mode='Markdown')
+        first_seen = data.get('first_interaction', 'Unknown')
+        
+        first_info = f"🏆 *САМЫЙ ПЕРВЫЙ ПОЛЬЗОВАТЕЛЬ:*\n👤 {name}\n🆔 `{uid}`\n📅 Зарегистрирован: `{first_seen}`"
+        bot.send_message(message.chat.id, first_info, parse_mode='Markdown')
 
 print("✅ Бот Game Line запущен!")
+print(f"📁 Файл пользователей: {USERS_FILE}")
+print("🤖 Команды: /start, /stats (только админ), /broadcast (только админ)")
 bot.infinity_polling()
