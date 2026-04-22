@@ -109,7 +109,7 @@ def broadcast(message):
     
     keyboard = InlineKeyboardMarkup(row_width=2)
     button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url , style="success")
-    keyboard.add(button1)
+    keyboard.add(button)
     
     bot.reply_to(message, f"🚀 Начинаю рассылку для {len(users_ids)} пользователей...")
     
