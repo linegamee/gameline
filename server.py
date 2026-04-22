@@ -109,8 +109,8 @@ def broadcast(message):
     
     # СОЗДАЕМ КЛАВИАТУРУ ПРАВИЛЬНО
     keyboard = InlineKeyboardMarkup(row_width=2)
-    button1 = InlineKeyboardButton(text="БОНУС", url=button_url , style="success")
-    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url , style="success")
+    button1 = InlineKeyboardButton(text="БОНУС", url=button_url)
+    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url)
     keyboard.add(button1, button2)  # Добавляем обе кнопки
     
     bot.reply_to(message, f"🚀 Начинаю рассылку для {len(users_ids)} пользователей...")
