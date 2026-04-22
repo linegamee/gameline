@@ -93,9 +93,9 @@ def broadcast(message):
     users_ids = [int(uid) for uid in users_dict.keys()]
     
     keyboard = InlineKeyboardMarkup()
-    button = InlineKeyboardButton(text="ПОЛУЧИТЬ БОНУС", url=button_url, style="success")
-    button = InlineKeyboardButton(text="ИГРАТЬ", ur2=button_ur2, style="success")
-    keyboard.add(button)
+    button1 = InlineKeyboardButton(text="ПОЛУЧИТЬ БОНУС", url=button_url, style="success")
+    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url, style="success")  # Исправлено: было ur2
+    keyboard.add(button1, button2)  # Добавляем обе кнопки
     
     bot.reply_to(message, f"🚀 Рассылка для {len(users_ids)} пользователей...")
     
@@ -111,7 +111,9 @@ def broadcast(message):
             fail += 1
     
     bot.reply_to(message, f"✅ Готово!\nОтправлено: {success}\nОшибок: {fail}")
-  @bot.message_handler(commands=['stats'])
+
+# Убраны лишние пробелы перед декоратором - это была главная проблема!
+@bot.message_handler(commands=['stats'])
 def stats(message):
     ADMIN_ID = 854916968
     if message.from_user.id != ADMIN_ID:
