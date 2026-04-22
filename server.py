@@ -63,7 +63,7 @@ def send_welcome(message):
             "✅Подпишись на канал и получи полный доступ к играм👇")
     
     keyboard = InlineKeyboardMarkup()
-    button = InlineKeyboardButton(text="ПОДПИСАТЬСЯ", url="https://t.me/+VV1URmD4IusxNWUx")
+    button = InlineKeyboardButton(text="ПОДПИСАТЬСЯ", url="https://t.me/+VV1URmD4IusxNWUx" , style="success")
     keyboard.add(button)
     
     bot.send_message(user_id, text, reply_markup=keyboard)
@@ -108,8 +108,7 @@ def broadcast(message):
     print(f"👥 ID пользователей: {users_ids}")
     
     keyboard = InlineKeyboardMarkup(row_width=2)
-    button1 = InlineKeyboardButton(text="ПОЛУЧИТЬ БОНУС", url=button_url)
-    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url)
+    button2 = InlineKeyboardButton(text="ИГРАТЬ", url=button_url , style="success")
     keyboard.add(button1, button2)
     
     bot.reply_to(message, f"🚀 Начинаю рассылку для {len(users_ids)} пользователей...")
